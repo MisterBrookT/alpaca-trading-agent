@@ -8,6 +8,13 @@ Bilingual running glossary for this project. Term stays English; meaning in plai
 | exposure | 敞口 | How much your P&L moves when some risk factor moves; what you are "on the hook for" | IBIT gives Bitcoin exposure |
 | proxy | 代理标的 | A tradable instrument used to get exposure to something you can't trade directly | MSTR as a levered BTC proxy |
 | notional | 名义金额 | Full market value the position controls, not the cash you put up | 1 IBIT contract ≈ $4,378 notional |
+| variance risk premium | 方差风险溢价 | The habitual gap between implied and later-realized vol; the seller's structural edge | MSTR +26.6 pts, IBIT +4.0 |
+| iron fly | 铁蝶式 | Short straddle plus protective wings; credit smaller, loss capped | our chosen structure |
+| wing | 保护腿 | The far OTM option bought purely to bound the tail | 135 call / 115 put |
+| reward:risk | 盈亏比 | Credit collected divided by worst-case loss | ±$10 wing = 1.35 |
+| gap risk | 跳空风险 | Price jumping while the market is closed, past any hedge | Wed night BTC move on MSTR |
+| shortable / easy to borrow | 可做空 / 易借券 | Whether you can sell shares you don't own, cheaply | required for two-way delta hedge |
+| leveraged proxy | 杠杆代理标的 | Instrument that amplifies another asset's moves | MSTR borrows to hold BTC |
 | ETF (exchange-traded fund) | 交易所交易基金 | One ticker that holds a basket of assets | SPY = S&P 500 basket |
 | call / put | 认购 / 认沽 | Right to buy / right to sell at the strike | `SPY260904C00762000` = C for call |
 | strike price | 行权价 | The price the option lets you transact at | 762 in the code above |
