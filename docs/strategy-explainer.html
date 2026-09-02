@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Three options strategies — what you're actually choosing</title>
+<style>
+  :root{
+    --bg:#fbfbfa; --ink:#1a1a19; --mute:#6b6b66; --line:#e2e1dd; --card:#fff;
+    --a:#2f6f4f; --b:#b8443a; --c:#3c5a9a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:36px 28px 64px}
+  h1{font-size:25px;margin:0 0 6px;letter-spacing:-.015em}
+  .sub{color:var(--mute);margin:0 0 26px;font-size:14px}
+  .layout{display:grid;grid-template-columns:290px 1fr;gap:26px;align-items:start}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+  .panel h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mute);
+            margin:0 0 14px;font-weight:600}
+  .ctl{margin-bottom:16px}
+  .ctl label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+  .ctl label b{font-variant-numeric:tabular-nums;font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--ink)}
+  .hint{font-size:11.5px;color:var(--mute);margin-top:3px}
+  .picks{display:flex;flex-direction:column;gap:7px;margin-bottom:4px}
+  .pick{display:flex;gap:9px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);
+        border-radius:7px;cursor:pointer;font-size:13px;background:#fff}
+  .pick.off{opacity:.4}
+  .pick .sw{width:11px;height:11px;border-radius:3px;margin-top:4px;flex:0 0 auto}
+  .pick .nm{font-weight:600}
+  .pick .ds{font-size:11.5px;color:var(--mute);line-height:1.4}
+  canvas{width:100%;display:block}
+  .chart{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px 10px;margin-bottom:18px}
+  .chart h3{font-size:14px;margin:0 0 2px}
+  .chart p.cap{font-size:12.5px;color:var(--mute);margin:0 0 10px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);
+        font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:600}
+  td.name{font-weight:600}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px}
+  .note{background:#fff;border:1px solid var(--line);border-left:3px solid var(--ink);
+        border-radius:0 8px 8px 0;padding:13px 16px;font-size:13.5px;margin-top:20px}
+  .note b{font-weight:600}
+  code{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f1f0ec;padding:1px 5px;border-radius:4px}
+  .mkt{font:12px ui-monospace,Menlo,monospace;color:var(--mute);margin-bottom:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Three options strategies — what you're actually choosing</h1>
+  <p class="sub">Same account, same 2 sessions, same $100,000. Only the payoff shape differs.
+     Move one slider and watch which strategy's fate changes.</p>
+  <div class="mkt" id="mkt"></div>
+
+  <div class="layout">
+    <div>
+      <div class="panel">
+        <h2>Strategies</h2>
+        <div class="picks" id="picks"></div>
+      </div>
+      <div class="panel" style="margin-top:18px">
+        <h2>What the market does</h2>
+        <div class="ctl">
+          <label>Realized volatility <b><span id="rvV"></span></b></label>
+          <input type="range" id="rv" min="4" max="45" step="0.5" value="17.5">
+          <div class="hint">How much SPY actually moves. Implied vol is priced at
+            <b id="ivEcho"></b> — you are betting on the gap.</div>
+        </div>
+        <div class="ctl">
+          <label>Drift over 2 sessions <b><span id="drV"></span></b></label>
+          <input type="range" id="dr" min="-3" max="3" step="0.1" value="0">
+          <div class="hint">Directional tilt. Only strategy B cares much.</div>
+        </div>
+        <div class="ctl">
+          <label>Risk budget <b><span id="rbV"></span></b></label>
+          <input type="range" id="rb" min="0.5" max="10" step="0.5" value="2">
+          <div class="hint">Share of $100k the risk gate will let the agent lose.</div>
+        </div>
+        <div class="ctl">
+          <label>Re-hedges per session <b><span id="hgV"></span></b></label>
+          <input type="range" id="hg" min="1" max="26" step="1" value="13">
+          <div class="hint">Strategy C only: how often the agent flattens delta.
+            More hedging = tighter tails, more slippage.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="chart">
+        <h3>1 · Payoff shape at expiry</h3>
+        <p class="cap">P&amp;L if you did nothing and let Friday's options expire, versus where SPY lands.</p>
+        <canvas id="cv1" height="620"></canvas>
+      </div>
+      <div class="chart">
+        <h3>2 · Where your P&amp;L actually lands after 2 sessions</h3>
+        <p class="cap">4,000 simulated paths at the realized vol you chose, marked to market at
+           Thursday's close — the moment the judges look at your account.</p>
+        <canvas id="cv2" height="560"></canvas>
+      </div>
+      <div class="chart">
+        <h3>3 · The numbers</h3>
+        <table id="tbl"></table>
+      </div>
+      <div class="note" id="verdict"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- live market inputs (Alpaca paper account PA3ZLVWUMG55, 2026-09-02) ----------
+const S0 = 762.15;      // SPY last
+const IV = 0.175;       // ATM implied vol, Sep-4 expiry
+// T calibrated so BS reprices the real ATM quote (762 call = $3.905 mid) at IV 17.5%.
+// Market vol-time < calendar time; hardcoding 3/252 overpriced the call by 50%.
+const T_EXP = 0.005387;        // now -> Fri expiry, in vol-years
+const T_JUDGE = T_EXP*(2/3);   // 2 of the 3 remaining sessions elapse before judging
+const EQUITY = 100000;
+
+document.getElementById('mkt').textContent =
+  `SPY ${S0}   ATM IV ${(IV*100).toFixed(1)}%   Sep-4 expiry   theta -1.02/day   gamma 0.040   vega 0.225   equity $${EQUITY.toLocaleString()}`;
+
+// ---------- Black-Scholes (r=q=0) ----------
+const erf = x => { const s=Math.sign(x); x=Math.abs(x);
+  const t=1/(1+0.3275911*x);
+  const y=1-((((1.061405429*t-1.453152027)*t+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);
+  return s*y; };
+const N = x => 0.5*(1+erf(x/Math.SQRT2));
+function bs(S,K,T,sig,call){
+  if(T<=1e-9) return Math.max(0, call ? S-K : K-S);
+  const v=sig*Math.sqrt(T), d1=Math.log(S/K)/v+v/2, d2=d1-v;
+  return call ? S*N(d1)-K*N(d2) : K*N(-d2)-S*N(-d1);
+}
+function delta(S,K,T,sig,call){
+  if(T<=1e-9) return call ? (S>K?1:0) : (S>K?0:-1);
+  const v=sig*Math.sqrt(T), d1=Math.log(S/K)/v+v/2;
+  return call ? N(d1) : N(d1)-1;
+}
+
+// ---------- strategy definitions, priced off the real chain ----------
+const K_SHORT = 757, K_LONG = 752;            // A: put credit spread
+const K_ATM   = 762;                          // B and C
+const CREDIT  = bs(S0,K_SHORT,T_EXP,IV,false) - bs(S0,K_LONG,T_EXP,IV,false);
+const WIDTH   = K_SHORT - K_LONG;
+const CALL0   = bs(S0,K_ATM,T_EXP,IV,true);
+const PUT0    = bs(S0,K_ATM,T_EXP,IV,false);
+
+const STRATS = [
+  { id:'A', name:'Defined-risk credit spread', color:getComputedStyle(document.documentElement).getPropertyValue('--a').trim(),
+    desc:`Sell ${K_SHORT} put, buy ${K_LONG} put. Collect $${(CREDIT*100).toFixed(0)}/spread, lose at most $${((WIDTH-CREDIT)*100).toFixed(0)}.`,
+    on:true },
+  { id:'B', name:'Long 0DTE directional', color:getComputedStyle(document.documentElement).getPropertyValue('--b').trim(),
+    desc:`Buy the ${K_ATM} call at $${CALL0.toFixed(2)}. Unlimited upside, premium is the max loss.`,
+    on:true },
+  { id:'C', name:'Delta-neutral premium income', color:getComputedStyle(document.documentElement).getPropertyValue('--c').trim(),
+    desc:`Sell the ${K_ATM} straddle, re-hedge delta with SPY shares. Profits when realized vol < implied.`,
+    on:true }
+];
+
+// contracts sized so the risk gate's budget is the max loss (A, B) or 1-sigma loss (C)
+function sizing(budget){
+  const nA = Math.max(1, Math.floor(budget / ((WIDTH-CREDIT)*100)));
+  const nB = Math.max(1, Math.floor(budget / (CALL0*100)));
+  const nC = Math.max(1, Math.floor(budget / ((CALL0+PUT0)*100*1.5)));
+  return {A:nA, B:nB, C:nC};
+}
+
+// terminal P&L at expiry, per strategy, for a given final spot
+function payoffExpiry(id,S,n){
+  if(id==='A') return n*100*(CREDIT - Math.max(0,K_SHORT-S) + Math.max(0,K_LONG-S));
+  if(id==='B') return n*100*(Math.max(0,S-K_ATM) - CALL0);
+  if(id==='C') return n*100*((CALL0+PUT0) - Math.max(0,S-K_ATM) - Math.max(0,K_ATM-S));
+  return 0;
+}
+
+// one simulated path -> P&L marked to market at judging time
+function simulate(rv,drift,steps,n){
+  const dt = T_JUDGE/steps;
+  let S = S0, hedge = 0, cash = 0;
+  // C opens delta-hedged
+  const d0 = n.C*100*(delta(S0,K_ATM,T_EXP,IV,true)+delta(S0,K_ATM,T_EXP,IV,false));
+  hedge = d0;                       // short straddle delta is -d0, so hold +d0 shares
+  cash -= hedge*S0;
+  for(let i=1;i<=steps;i++){
+    const z = Math.sqrt(-2*Math.log(Math.random()))*Math.cos(2*Math.PI*Math.random());
+    S *= Math.exp((drift/steps) - 0.5*rv*rv*dt + rv*Math.sqrt(dt)*z);
+    const Tr = T_EXP - i*dt;
+    const want = n.C*100*(delta(S,K_ATM,Tr,IV,true)+delta(S,K_ATM,Tr,IV,false));
+    const trade = want - hedge;
+    cash -= trade*S + Math.abs(trade)*0.01;   // 1c/share slippage
+    hedge = want;
+  }
+  const Tr = T_EXP - T_JUDGE;
+  const pA = n.A*100*(CREDIT - (bs(S,K_SHORT,Tr,IV,false) - bs(S,K_LONG,Tr,IV,false)));
+  const pB = n.B*100*(bs(S,K_ATM,Tr,IV,true) - CALL0);
+  const straddleNow = bs(S,K_ATM,Tr,IV,true)+bs(S,K_ATM,Tr,IV,false);
+  const pC = n.C*100*((CALL0+PUT0) - straddleNow) + cash + hedge*S;
+  return {A:pA, B:pB, C:pC, S};
+}
+
+// ---------- rendering ----------
+const $ = id => document.getElementById(id);
+const fmt = v => (v<0?'-':'') + '$' + Math.abs(Math.round(v)).toLocaleString();
+const dpr = () => window.devicePixelRatio || 1;
+
+function fit(cv){
+  const r = dpr(), w = cv.parentElement.clientWidth - 36;
+  cv.width = w*r; cv.style.height = cv.height/r + 'px';
+  const g = cv.getContext('2d'); g.setTransform(r,0,0,r,0,0);
+  return {g, W:w, H:cv.height/r};
+}
+
+function drawPayoff(state){
+  const cv=$('cv1'), {g,W,H}=fit(cv);
+  g.clearRect(0,0,W,H);
+  const L=64,R=14,Tp=14,B=34, w=W-L-R, h=H-Tp-B;
+  const lo=S0*0.955, hi=S0*1.045;
+  const n=sizing(state.budget);
+  let ymax=0;
+  STRATS.forEach(s=>{ if(!s.on) return;
+    for(let i=0;i<=120;i++){ const S=lo+(hi-lo)*i/120;
+      ymax=Math.max(ymax, Math.abs(payoffExpiry(s.id,S,n[s.id]))); } });
+  ymax = Math.max(ymax, 500)*1.12;
+  const X = S => L + (S-lo)/(hi-lo)*w;
+  const Y = p => Tp + h/2 - p/ymax*(h/2);
+
+  // grid
+  g.strokeStyle='#eeede9'; g.lineWidth=1; g.font='11px Menlo,monospace'; g.fillStyle='#8a8a84';
+  for(let k=-2;k<=2;k++){ const p=ymax*k/2, y=Y(p);
+    g.beginPath(); g.moveTo(L,y); g.lineTo(L+w,y); g.stroke();
+    g.textAlign='right'; g.fillText(fmt(p), L-8, y+4); }
+  for(let S=Math.ceil(lo/10)*10; S<=hi; S+=10){
+    g.strokeStyle='#f4f3f0'; g.beginPath(); g.moveTo(X(S),Tp); g.lineTo(X(S),Tp+h); g.stroke();
+    g.fillStyle='#8a8a84'; g.textAlign='center'; g.fillText(S, X(S), H-12); }
+  // zero line + spot
+  g.strokeStyle='#c9c8c3'; g.beginPath(); g.moveTo(L,Y(0)); g.lineTo(L+w,Y(0)); g.stroke();
+  g.strokeStyle='#1a1a19'; g.setLineDash([3,3]); g.beginPath();
+  g.moveTo(X(S0),Tp); g.lineTo(X(S0),Tp+h); g.stroke(); g.setLineDash([]);
+  g.fillStyle='#1a1a19'; g.textAlign='left'; g.fillText('spot '+S0, X(S0)+6, Tp+12);
+
+  STRATS.forEach(s=>{ if(!s.on) return;
+    g.strokeStyle=s.color; g.lineWidth=2.2; g.beginPath();
+    for(let i=0;i<=240;i++){ const S=lo+(hi-lo)*i/240, y=Y(payoffExpiry(s.id,S,n[s.id]));
+      i?g.lineTo(X(S),y):g.moveTo(X(S),y); }
+    g.stroke();
+    g.fillStyle=s.color; g.font='600 11.5px Menlo,monospace'; g.textAlign='left';
+    g.fillText(s.id+' · '+n[s.id]+'x', L+8, Tp+14+22*STRATS.filter(q=>q.on).indexOf(s));
+  });
+}
+
+function drawDist(state){
+  const cv=$('cv2'), {g,W,H}=fit(cv);
+  g.clearRect(0,0,W,H);
+  const on=STRATS.filter(s=>s.on); if(!on.length) return;
+  const L=64,R=14,Tp=16,B=34, w=W-L-R, rows=on.length, rh=(H-Tp-B)/rows;
+  let lo=Infinity, hi=-Infinity;
+  on.forEach(s=>{ const d=state.res[s.id];
+    lo=Math.min(lo,d.p01); hi=Math.max(hi,d.p99); });
+  const pad=(hi-lo)*0.08; lo-=pad; hi+=pad;
+  if(lo>0) lo=-pad; if(hi<0) hi=pad;
+  const X = p => L + (p-lo)/(hi-lo)*w;
+
+  g.font='11px Menlo,monospace';
+  on.forEach((s,ri)=>{
+    const d=state.res[s.id], top=Tp+ri*rh, base=top+rh-16;
+    // histogram
+    const bins=70, cnt=new Array(bins).fill(0);
+    d.samples.forEach(v=>{ let b=Math.floor((v-lo)/(hi-lo)*bins); if(b>=0&&b<bins) cnt[b]++; });
+    const mx=Math.max(...cnt);
+    g.fillStyle=s.color+'33';
+    for(let b=0;b<bins;b++){ const x=L+w*b/bins, bw=w/bins-0.6;
+      const bh=(cnt[b]/mx)*(rh-34); g.fillRect(x, base-bh, bw, bh); }
+    // p5-p95 band + median
+    g.strokeStyle=s.color; g.lineWidth=1.6;
+    g.beginPath(); g.moveTo(X(d.p05), base+6); g.lineTo(X(d.p95), base+6); g.stroke();
+    g.beginPath(); g.arc(X(d.median), base+6, 3.4, 0, 7); g.fillStyle=s.color; g.fill();
+    // zero
+    g.strokeStyle='#c9c8c3'; g.setLineDash([2,3]);
+    g.beginPath(); g.moveTo(X(0), top); g.lineTo(X(0), base+6); g.stroke(); g.setLineDash([]);
+    // label
+    g.fillStyle=s.color; g.font='600 12px Menlo,monospace'; g.textAlign='left';
+    g.fillText(s.id, L+4, top+13);
+    g.fillStyle='#6b6b66'; g.font='11px Menlo,monospace';
+    g.fillText(`median ${fmt(d.median)}   5–95% ${fmt(d.p05)} … ${fmt(d.p95)}   win ${(d.win*100).toFixed(0)}%`,
+               L+20, top+13);
+  });
+  // x axis: ticks on one row, caption above the axis line so nothing overlaps
+  const ay=H-B+10;
+  g.strokeStyle='#e2e1dd'; g.beginPath(); g.moveTo(L,ay); g.lineTo(L+w,ay); g.stroke();
+  g.fillStyle='#8a8a84'; g.textAlign='center'; g.font='11px Menlo,monospace';
+  for(let k=0;k<=5;k++){ const p=lo+(hi-lo)*k/5; g.fillText(fmt(p), X(p), ay+16); }
+  g.textAlign='right'; g.fillText('P&L at judging time  →', L+w, ay-7);
+}
+
+function stats(arr){
+  const s=[...arr].sort((a,b)=>a-b), q=f=>s[Math.floor(f*(s.length-1))];
+  return { samples:arr, median:q(.5), p05:q(.05), p95:q(.95), p01:q(.01), p99:q(.99),
+           win:arr.filter(v=>v>0).length/arr.length,
+           worst:s[0], best:s[s.length-1],
+           mean:arr.reduce((a,b)=>a+b,0)/arr.length };
+}
+
+function render(){
+  const rv=+$('rv').value/100, drift=+$('dr').value/100, budget=EQUITY*(+$('rb').value/100),
+        steps=+$('hg').value*2;
+  $('rvV').textContent=(rv*100).toFixed(1)+'%';
+  $('drV').textContent=(drift>=0?'+':'')+(drift*100).toFixed(1)+'%';
+  $('rbV').textContent=(+$('rb').value).toFixed(1)+'%  ('+fmt(budget)+')';
+  $('hgV').textContent=$('hg').value;
+  $('ivEcho').textContent=(IV*100).toFixed(1)+'%';
+
+  const n=sizing(budget), A=[],B=[],C=[];
+  for(let i=0;i<4000;i++){ const r=simulate(rv,drift,steps,n); A.push(r.A);B.push(r.B);C.push(r.C); }
+  const state={budget, res:{A:stats(A), B:stats(B), C:stats(C)}};
+
+  drawPayoff(state); drawDist(state);
+
+  // table
+  const rows=[['Strategy','Contracts','Median P&L','5th pct','95th pct','Win rate','Worst path']];
+  STRATS.forEach(s=>{ const d=state.res[s.id];
+    rows.push([`<span class="dot" style="background:${s.color}"></span>${s.id} · ${s.name}`,
+      sizing(budget)[s.id]+'x', fmt(d.median), fmt(d.p05), fmt(d.p95),
+      (d.win*100).toFixed(0)+'%', fmt(d.worst)]); });
+  $('tbl').innerHTML = rows.map((r,i)=> i? `<tr><td class="name">${r[0]}</td>`+r.slice(1).map(c=>`<td>${c}</td>`).join('')+'</tr>'
+    : '<tr>'+r.map(c=>`<th>${c}</th>`).join('')+'</tr>').join('');
+
+  // one observation, recomputed from what is on screen
+  const gap=(rv-IV)*100, dC=state.res.C, dA=state.res.A, dB=state.res.B;
+  let v;
+  if(gap < -2) v = `<b>Realized vol ${(rv*100).toFixed(1)}% is below the ${(IV*100).toFixed(1)}% you sold.</b>
+      That gap is C's entire edge: median ${fmt(dC.median)} versus ${fmt(dA.median)} for A. Selling vol pays when the market is calmer than its own price.`;
+  else if(gap > 4) v = `<b>Realized vol ${(rv*100).toFixed(1)}% now exceeds implied ${(IV*100).toFixed(1)}%.</b>
+      C's edge inverts — worst path ${fmt(dC.worst)} — while B's convexity turns the same turbulence into ${fmt(dB.p95)} at the 95th percentile. Short vol and long vol are the same bet with the sign flipped.`;
+  else v = `<b>Realized ≈ implied.</b> Nobody has an edge from vol, so the ranking collapses to position size and shape:
+      A caps its loss at ${fmt(dA.worst)} by construction, B risks its whole premium ${fmt(dB.worst)} for a ${fmt(dB.p95)} tail, C sits between them and pays slippage for the privilege.`;
+  $('verdict').innerHTML = v + `<br><br><span style="color:#6b6b66;font-size:12.5px">Model: Black-Scholes at flat ${(IV*100).toFixed(1)}% IV, r=q=0, 1¢/share hedge slippage, 4,000 GBM paths, no early assignment, no bid-ask on the options. It is a teaching model, not a forecast.</span>`;
+}
+
+// controls
+$('picks').innerHTML = STRATS.map(s=>
+  `<div class="pick" data-id="${s.id}"><span class="sw" style="background:${s.color}"></span>
+   <span><span class="nm">${s.id} · ${s.name}</span><br><span class="ds">${s.desc}</span></span></div>`).join('');
+$('picks').addEventListener('click', e=>{
+  const el=e.target.closest('.pick'); if(!el) return;
+  const s=STRATS.find(q=>q.id===el.dataset.id); s.on=!s.on;
+  el.classList.toggle('off', !s.on); render();
+});
+['rv','dr','rb','hg'].forEach(id=>$(id).addEventListener('input', render));
+window.addEventListener('resize', render);
+render();
+</script>
+</body>
+</html>
