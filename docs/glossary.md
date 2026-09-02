@@ -5,6 +5,9 @@ Bilingual running glossary for this project. Term stays English; meaning in plai
 | Term | 中文 | Plain meaning | Where it showed up |
 | --- | --- | --- | --- |
 | underlying | 标的物 | The asset an option is written on (SPY, IBIT, MSTR…) | choosing what to trade |
+| exposure | 敞口 | How much your P&L moves when some risk factor moves; what you are "on the hook for" | IBIT gives Bitcoin exposure |
+| proxy | 代理标的 | A tradable instrument used to get exposure to something you can't trade directly | MSTR as a levered BTC proxy |
+| notional | 名义金额 | Full market value the position controls, not the cash you put up | 1 IBIT contract ≈ $4,378 notional |
 | ETF (exchange-traded fund) | 交易所交易基金 | One ticker that holds a basket of assets | SPY = S&P 500 basket |
 | call / put | 认购 / 认沽 | Right to buy / right to sell at the strike | `SPY260904C00762000` = C for call |
 | strike price | 行权价 | The price the option lets you transact at | 762 in the code above |
