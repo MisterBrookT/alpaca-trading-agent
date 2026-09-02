@@ -38,9 +38,9 @@ Submission package: title, short + long description, tags, cover image, video
 presentation, slides, public GitHub repo, demo URL, **Alpaca paper account ID**,
 ≤5 social links. Teams 1–6 people.
 
-Timing constraint: deadline Sep 4, 23:00 China time ≈ 11:00 UTC, i.e. **before the
-US cash session opens on Sep 4**. Only the **Sep 3 session** (plus overnight/crypto)
-is realistically available for live P&L.
+Trading window (China time): deadline Fri Sep 4, 23:00. US cash session runs
+21:30–04:00 CST. Two full sessions remain — **Wed Sep 2 night** and **Thu Sep 3
+night** (closes 04:00 Fri, 19h before the deadline). ~13 hours of market time.
 
 ## Direction (draft)
 
