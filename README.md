@@ -9,7 +9,19 @@ Entry for the **Alpaca AI Trading Agents Hackathon** (lablab.ai, 28 Aug – 4 Se
 
 ## Status
 
+Registered on lablab.ai as Brook Tang (GitHub auth) — **waiting for approval**.
 Repo scaffolded. No implementation yet — design first.
+
+## Hard requirements (from the event page)
+
+- Autonomous AI trading agent on Alpaca's **Trading API**
+- MUST use Alpaca's **MCP server or CLI**
+- MUST incorporate **options trading**
+- Final submission MUST run on a **brand-new** paper account, starting balance **$100,000**
+  (reused accounts are ineligible for judging)
+- One-page write-up: AI logic, risk gates, Alpaca infrastructure
+- Register on the lablab.ai **Discord** too
+- Optional: up to 5 social posts (X/LinkedIn, tag @lablabai + @AlpacaHQ) → 2 × $500 social prize
 
 ## Direction (draft)
 
